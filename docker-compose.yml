@@ -1,0 +1,16 @@
+services:
+  certbot:
+    image: aprendendolinux/certbot-mailcow:latest
+    restart: always
+    container_name: certbot
+    hostname: certbot
+    volumes:
+      - /srv/mailcow-dockerized/data/assets/ssl:/certificates
+      - /srv/certbot/letsencrypt/data:/etc/letsencrypt
+      - /srv/certbot/logs:/var/log/letsencrypt
+    environment:
+      - TZ=America/Sao_Paulo
+      - CLOUDFLARE_EMAIL="seu@email.com.br"
+      - CLOUDFLARE_API_KEY="sua-api-da-cloudflare-aqui"
+      - MY_DOMAINS="*.dominio1.com.br,*.dominio2.com.br,*.dominio3.com.br,*.dominio4.com.br,*.dominio5.com.br
+      - DRY_RUN="false"

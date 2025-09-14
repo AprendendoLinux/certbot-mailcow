@@ -1,0 +1,116 @@
+#!/bin/bash
+
+source /opt/certbot/bin/activate
+
+# Verifica se as variáveis de ambiente estão definidas
+if [ -z "$CLOUDFLARE_EMAIL" ]; then
+  echo "Erro: A variável CLOUDFLARE_EMAIL não está definida."
+  exit 1
+fi
+if [ -z "$CLOUDFLARE_API_KEY" ]; then
+  echo "Erro: A variável CLOUDFLARE_API_KEY não está definida."
+  exit 1
+fi
+if [ -z "$MY_DOMAINS" ]; then
+  echo "Erro: A variável MY_DOMAINS não está definida."
+  exit 1
+fi
+if [ -z "$DRY_RUN" ]; then
+  echo "Erro: A variável DRY_RUN não está definida."
+  exit 1
+fi
+
+# Define o diretório de saída dos certificados (padrão: /certificates)
+CERT_OUTPUT_DIR="${CERT_OUTPUT_DIR:-/certificates}"
+
+# Remove aspas simples ou duplas do CLOUDFLARE_EMAIL e do DRY_RUN
+CLEAN_CLOUDFLARE_EMAIL=$(echo "$CLOUDFLARE_EMAIL" | tr -d '"'\''')
+DRY_RUN=$(echo "$DRY_RUN" | tr -d '"'\''')
+
+# Diretórios para configuração e logs
+CERT_DIR="/etc/letsencrypt"
+LOG_DIR="/var/log/letsencrypt"
+LOG_FILE="/var/log/certificados.log"
+
+# Cria o arquivo cloudflare.ini com o e-mail limpo
+echo "dns_cloudflare_email = $CLEAN_CLOUDFLARE_EMAIL" > /etc/cloudflare.ini
+echo "dns_cloudflare_api_key = $CLOUDFLARE_API_KEY" >> /etc/cloudflare.ini
+
+# Converte a string de domínios em um array usando a vírgula como separador
+DOMAINS=()
+while IFS= read -r -d ',' domain; do
+  # Remove espaços e aspas do domínio
+  clean_domain=$(echo "$domain" | tr -d '[:space:]\"'\''')
+  if [ -n "$clean_domain" ]; then
+    DOMAINS+=("$clean_domain")
+  fi
+done <<< "$MY_DOMAINS,"
+
+# Monta a lista de domínios para o comando Certbot
+DOMAIN_ARGS=""
+for domain in "${DOMAINS[@]}"; do
+  DOMAIN_ARGS="$DOMAIN_ARGS -d $domain"
+done
+
+# Constrói os argumentos do Certbot com o e-mail limpo
+CERTBOT_ARGS="--non-interactive --expand --dns-cloudflare --dns-cloudflare-credentials /etc/cloudflare.ini --dns-cloudflare-propagation-seconds 15 --agree-tos --email $CLEAN_CLOUDFLARE_EMAIL $DOMAIN_ARGS --verbose"
+
+# Adiciona --dry-run se DRY_RUN for true
+if [ "$DRY_RUN" = "true" ]; then
+  CERTBOT_ARGS="--dry-run $CERTBOT_ARGS"
+fi
+
+# Verifica se os diretórios existem
+for dir in "$CERT_DIR" "$LOG_DIR" "$CERT_OUTPUT_DIR"; do
+  if [ ! -d "$dir" ]; then
+    echo "[$(date)] ERRO: Diretório $dir não existe. Criando..." >> "$LOG_FILE"
+    mkdir -p "$dir"
+    chmod 700 "$dir"
+  fi
+done
+
+# Verifica se o arquivo cloudflare.ini existe
+if [ ! -f /etc/cloudflare.ini ]; then
+  echo "[$(date)] ERRO: Arquivo /etc/cloudflare.ini não encontrado." >> "$LOG_FILE"
+  exit 1
+fi
+
+# Garante permissões seguras para o arquivo de credenciais
+chmod 600 /etc/cloudflare.ini
+
+# Executa o Certbot para renovar ou expandir certificados
+echo "[$(date)] Iniciando renovação/expansão de certificados..." >> "$LOG_FILE"
+certbot certonly $CERTBOT_ARGS >> "$LOG_FILE" 2>&1
+
+# Verifica o status da execução
+if [ $? -eq 0 ]; then
+  echo "[$(date)] Sucesso: Certificados renovados ou expandidos com sucesso." >> "$LOG_FILE"
+  # Copia os certificados do primeiro domínio para o diretório de saída com nomes específicos
+  if [ ${#DOMAINS[@]} -gt 0 ]; then
+    domain="${DOMAINS[0]}"
+    # Remove o prefixo *. se presente (para domínios wildcard)
+    cert_domain=$(echo "$domain" | sed 's/^\*\.//')
+    CERT_PATH="/etc/letsencrypt/live/$cert_domain"
+    if [ -d "$CERT_PATH" ]; then
+      echo "[$(date)] Copiando certificados para $CERT_OUTPUT_DIR..." >> "$LOG_FILE"
+      cp "$CERT_PATH/fullchain.pem" "$CERT_OUTPUT_DIR/cert.pem" 2>> "$LOG_FILE"
+      cp "$CERT_PATH/privkey.pem" "$CERT_OUTPUT_DIR/key.pem" 2>> "$LOG_FILE"
+      if [ $? -eq 0 ]; then
+        echo "[$(date)] Sucesso: Certificados para $cert_domain copiados como cert.pem e key.pem." >> "$LOG_FILE"
+        chmod 600 "$CERT_OUTPUT_DIR/cert.pem" "$CERT_OUTPUT_DIR/key.pem"
+      else
+        echo "[$(date)] ERRO: Falha ao copiar certificados para $CERT_OUTPUT_DIR." >> "$LOG_FILE"
+        exit 1
+      fi
+    else
+      echo "[$(date)] ERRO: Diretório de certificados $CERT_PATH não encontrado." >> "$LOG_FILE"
+      exit 1
+    fi
+  else
+    echo "[$(date)] ERRO: Nenhum domínio válido encontrado para copiar certificados." >> "$LOG_FILE"
+    exit 1
+  fi
+else
+  echo "[$(date)] ERRO: Falha ao renovar ou expandir certificados. Verifique o log em $LOG_FILE." >> "$LOG_FILE"
+  exit 1
+fi
