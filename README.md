@@ -45,7 +45,7 @@ docker pull aprendendolinux/certbot-mailcow:latest
 ### Construindo Localmente (para GitHub)
 Clone o repositório:
 ```
-git clone https://github.com/seu-usuario/certbot-cloudflare-docker.git
+git clone https://github.com/AprendendoLinux/certbot-mailcow.git
 cd certbot-cloudflare-docker
 ```
 
@@ -191,4 +191,4 @@ Este projeto é licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE)
 
 Mantenedor: Henrique Fagundes <henrique@henrique.tec.br>
 
-Para mais informações, visite o [GitHub Repository](https://github.com/seu-usuario/certbot-cloudflare-docker) ou o [Docker Hub Page](https://hub.docker.com/r/aprendendolinux/certbot-mailcow).
+Para mais informações, visite o [GitHub Repository](https://github.com/AprendendoLinux/certbot-mailcow) ou o [Docker Hub Page](https://hub.docker.com/r/aprendendolinux/certbot-mailcow).
