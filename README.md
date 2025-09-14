@@ -46,7 +46,7 @@ docker pull aprendendolinux/certbot-mailcow:latest
 Clone o repositório:
 ```
 git clone https://github.com/AprendendoLinux/certbot-mailcow.git
-cd certbot-cloudflare-docker
+cd certbot-mailcow
 ```
 
 Construa a imagem:
