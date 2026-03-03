@@ -20,6 +20,8 @@ RUN apk update \
     gcc \
     openssl-dev \
     make \
+    docker \
+    docker-cli-compose \
     && rm -rf /var/cache/apk/* \
     && sed -i 's/root:x:0:0:root:\/root:\/bin\/sh/root:x:0:0:root:\/root:\/bin\/bash/' /etc/passwd \
     && bash \

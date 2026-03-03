@@ -5,12 +5,20 @@ services:
     container_name: certbot
     hostname: certbot
     volumes:
-      - /srv/mailcow-dockerized/data/assets/ssl:/certificates
+      # Mapeia a raiz do projeto alvo (Mailcow) para que o Compose consiga ler todo o contexto do projeto ao reiniciar
+      - /srv/mailcow-dockerized:/srv/mailcow-dockerized
+      # Mapeamento do socket do Docker (Necessário para a automação de restart)
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Armazenamento persistente e logs do Let's Encrypt
       - /srv/certbot/letsencrypt/data:/etc/letsencrypt
       - /srv/certbot/logs:/var/log/letsencrypt
     environment:
       - TZ=America/Sao_Paulo
-      - CLOUDFLARE_EMAIL="seu@email.com.br"
-      - CLOUDFLARE_API_KEY="sua-api-da-cloudflare-aqui"
-      - MY_DOMAINS="*.dominio1.com.br,*.dominio2.com.br,*.dominio3.com.br,*.dominio4.com.br,*.dominio5.com.br
-      - DRY_RUN="false"
+      - CLOUDFLARE_EMAIL=seu@email.com.br
+      - CLOUDFLARE_API_KEY=sua-api-da-cloudflare-aqui
+      - MY_DOMAINS=*.dominio1.com.br,*.dominio2.com.br
+      - DRY_RUN=false
+      # (Opcional) Define onde os arquivos cert.pem e key.pem serão injetados
+      - CERT_OUTPUT_DIR=/srv/mailcow-dockerized/data/assets/ssl
+      # (Opcional) Define qual projeto Docker Compose deverá ser recriado ao renovar os certificados
+      - TARGET_COMPOSE_FILE=/srv/mailcow-dockerized/docker-compose.yml
