@@ -130,7 +130,7 @@ if [ $? -eq 0 ]; then
                 echo "[$(date)] Executando update no diretório: $COMPOSE_DIR" >> "$LOG_FILE"
                             
                 # Entra na pasta e dispara o docker compose (assim ele lê o override.yml magicamente)
-                cd "$COMPOSE_DIR" && docker compose up -d --force-recreate >> "$LOG_FILE" 2>&1
+                cd "$COMPOSE_DIR" && docker compose up -d --force-recreate nginx-mailcow postfix-mailcow dovecot-mailcow >> "$LOG_FILE" 2>&1
                 
                 if [ $? -eq 0 ]; then
                     echo "[$(date)] SUCESSO: Contêineres alvo foram recriados e reiniciados com o novo certificado." >> "$LOG_FILE"
